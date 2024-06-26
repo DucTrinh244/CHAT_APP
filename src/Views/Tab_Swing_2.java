@@ -17,6 +17,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
 import java.awt.*;
 import java.awt.Window.Type;
@@ -37,7 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Tab_Swing_1 extends JFrame implements Runnable{
+public class Tab_Swing_2 implements Runnable{
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
@@ -51,37 +52,18 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
     private UserDAO userDAO = new UserDAO();
     private MessageDAO messageDAO= new MessageDAO();
     private GroupDAO groupDAO= new GroupDAO();
-    private ConnectMySql connectMySql= new ConnectMySql();;
+    private ConnectMySql connectMySql= new ConnectMySql();
+	private Thread thread_1;;
 
-
-    public Tab_Swing_1(String address, int Port, String UserName){
-        this.UserName= UserName;
-        try {
-            socket = new Socket(address, Port);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-            // Gửi ID của client đến server
-            out.println(UserName);
-
-            Views_Tab_Swing_1();
-            
-            new Thread(new Tab_Swing_1.IncomingReader()).start();
-            
-        } catch (IOException e) {
-//            e.printStackTrace();
-        }
-       
-    }
-
-
-    public void Views_Tab_Swing_1() {
+    public Tab_Swing_2(String address, int Port, String UserName) {
+    	this.UserName= UserName;
+    	JFrame frame= new JFrame();
         tabbedPane = new JTabbedPane();
         tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT); // Enable scrollable tabs
         textAreas = new HashMap<>();
 
-        getContentPane().setLayout(new BorderLayout());
-        getContentPane().add(tabbedPane, BorderLayout.CENTER);
+        frame.setLayout(new BorderLayout());
+        frame.add(tabbedPane, BorderLayout.CENTER);
 
         // Adding ChangeListener to JTabbedPane
         tabbedPane.addChangeListener(new ChangeListener() {
@@ -97,7 +79,7 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
         });
         
         addTab("Global_Chatting");
-        setTextInTab("Global_Chatting", "Bạn có thể nhắn tin ở đây !");
+//        setTextInTab("Global_Chatting", "Bạn có thể nhắn tin ở đây !");
         // DUYỆT PHẦN TỪ CHO CHO CLIENT HIỂN THỊ
         List<User> listUserFriend = userDAO.getAllUsers();
         for (User user : listUserFriend) {
@@ -111,7 +93,7 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
         JPanel inputPanel = new JPanel(new BorderLayout());
         inputField = new JTextField();
         sendButton = new JButton("");
-        sendButton.setIcon(new ImageIcon(Tab_Swing_1.class.getResource("/Assets/Client/send.png")));
+        sendButton.setIcon(new ImageIcon(Tab_Swing_2.class.getResource("/Assets/Client/send.png")));
 
 
         inputPanel.add(inputField, BorderLayout.CENTER);
@@ -119,17 +101,15 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
 
         sendButton.addActionListener(event ->{
             ActionButtonSendMessage(NameTabCurrent, inputField.getText(),UserName);
-                    PrintTabClick(NameTabCurrent);
           MessageDAO messageDAO=  new MessageDAO();
           messageDAO.AddMessage(GetDataMessage());
         });
         inputField.addActionListener(event ->{
             ActionButtonSendMessage(NameTabCurrent, inputField.getText(),UserName);
-                    PrintTabClick(NameTabCurrent);
         });
         
         // ĐÓNG CLIENT VÀ GỬI LÊN SERVER 
-        addWindowListener(new WindowAdapter() {
+        frame.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
                 if (socket != null && !socket.isClosed()) {
@@ -143,29 +123,62 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
                 System.exit(0);
             }
         });
-        getContentPane().add(inputPanel, BorderLayout.SOUTH);
-        setTitle("View - "+UserName);
+        frame.add(inputPanel, BorderLayout.SOUTH);
+        frame.setTitle("View - "+UserName);
 //        setType(Type.UTILITY);
-        setSize(639, 500);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-        setVisible(true);
-        try {
+        frame.setSize(400, 500);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+        
+      	try {
+            socket = new Socket(address, Port);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            // Gửi ID của client đến server
+            out.println(UserName);        
+
+             new Thread(this).start();
+            
+    		new Thread(new Tab_Swing_2.IncomingReader()).start();
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        	closeResources();
+        }
+    }
+	@Override
+	public void run() {
+	      
+		try {
             // Fetch and display global chat messages
             out.println("GET_GLOBAL_CHAT");
             readAndDisplayMessages("Global_Chatting");
 
-            // Fetch and display private chat messages
-            out.println("GET_PRIVATE_CHAT 1 3");
-            readAndDisplayMessages("3");
-
+            out.println("GET_NUMBER_USER");
+            List<String> ListUser= new ArrayList<>();
+            String response;
+            while ((response = in.readLine()) != null) {
+                if (response.equals("END_OF_DATA")) {
+                    break;
+                }
+                ListUser.add(response);
+            }
+            for(String list:ListUser) {
+            	if(list.equals(UserName)) {
+            	}else {
+            	out.println("GET_PRIVATE_CHAT "+UserName+" "+list);
+                 readAndDisplayMessages(list);
+            	}
+            }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             closeResources();
         }
-        
-    }
+	}
     private void closeResources() {
         try {
             if (in != null) {
@@ -198,7 +211,7 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
             // ĐẨY TIN NHẮN LÊN SERVER ĐỂ XỬ LÝ
             out.println(fullMessage);
             JTextArea textArea = textAreas.get(ReceiID);
-            System.out.println("Người nhận là :"+ReceiID);
+            
             
             if(ReceiID.equals("Global_Chatting")){
             	groupDAO.insertGroupMessage(getDataGroupMessage());
@@ -226,9 +239,6 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
         textAreas.put(title, textArea);
     }
 
-    public void PrintTabClick(String tablink){
-//        System.out.println("tab currently :"+tablink);
-    }
     public void setTextInTab(String title, String text) {
         JTextArea textArea = textAreas.get(title);
         if (textArea != null) {
@@ -338,9 +348,6 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
 	        return null; // Trả về null khi giá trị giá không hợp lệ
 	    }
     }
-   
- 
-    
     private String formatTimestamp(Timestamp timestamp) {
         LocalTime time = timestamp.toLocalDateTime().toLocalTime();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -348,27 +355,11 @@ public class Tab_Swing_1 extends JFrame implements Runnable{
     }
 	public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            Tab_Swing_1 example = new Tab_Swing_1("127.0.0.1",4000,"1");
+            Tab_Swing_2 example = new Tab_Swing_2("127.0.0.1",4000,"1");
 //            example.setVisible(true);
         });
     }
 
 
-	@Override
-	public void run() {
-		try {
-            // Fetch and display global chat messages
-            out.println("GET_GLOBAL_CHAT");
-            readAndDisplayMessages("Global_Chatting");
 
-            // Fetch and display private chat messages
-            out.println("GET_PRIVATE_CHAT 1 3");
-            readAndDisplayMessages("3");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            closeResources();
-        }
-	}
 }

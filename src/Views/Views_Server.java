@@ -90,8 +90,8 @@ public class Views_Server {
 		ButtonStart.setBounds(23, 345, 178, 42);
 		frmServer.getContentPane().add(ButtonStart);
 		
-		 ButtonTest = new JButton("Test Server");
-		 ButtonTest.setBackground(new Color(128, 255, 128));
+		ButtonTest = new JButton("Test Server");
+		ButtonTest.setBackground(new Color(128, 255, 128));
 		ButtonTest.addActionListener(event -> ActionButtonTestServer ());
 		ButtonTest.setIcon(new ImageIcon(Views_Server.class.getResource("/Assets/Server/testing.png")));
 		ButtonTest.setFont(new Font("Tahoma", Font.BOLD, 12));

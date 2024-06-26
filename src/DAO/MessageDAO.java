@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,4 +42,43 @@ public class MessageDAO {
 		}
     }
 
+    // Lấy lịch sử đoạn chat về 
+
+    public List<Message> getChatMessages(String user1, String user2) {
+    List<Message> messages = new ArrayList<>();
+    
+    String query = "SELECT m.message_id, m.sender_username, m.receiver_username, m.message_content, m.sent_timestamp " +
+                   "FROM message m " +
+                   "WHERE (m.sender_username = ? AND m.receiver_username = ?) " +
+                   "   OR (m.sender_username = ? AND m.receiver_username = ?) " +
+                   "ORDER BY m.sent_timestamp ASC";
+                   
+    try (Connection conn = connectMySql.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(query)) {
+
+        stmt.setString(1, user1);
+        stmt.setString(2, user2);
+        stmt.setString(3, user2);
+        stmt.setString(4, user1);
+
+        ResultSet resultSet = stmt.executeQuery();
+
+        while (resultSet.next()) {
+            int messageId = resultSet.getInt("message_id");
+            String senderUsername = resultSet.getString("sender_username");
+            String receiverUsername = resultSet.getString("receiver_username");
+            String messageContent = resultSet.getString("message_content");
+            Timestamp sentTimestamp = resultSet.getTimestamp("sent_timestamp");
+
+            Message message = new Message(messageId, senderUsername, receiverUsername, messageContent, sentTimestamp);
+            messages.add(message);
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    
+    return messages;
+}
+    
 }

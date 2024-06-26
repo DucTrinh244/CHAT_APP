@@ -5,18 +5,23 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 import Models.GroupMessage;
+import Models.Message;
 import Services.ConnectMySql;
 
 public class GroupDAO {
     private Connection connection;
     private ConnectMySql connectMySql= new ConnectMySql();
-    
+
+
+
     public void insertRoomMember(int roomId, String username) {
         String insertSQL = "INSERT INTO roommember (room_id, username) VALUES (?, ?)";
 
@@ -75,42 +80,54 @@ public class GroupDAO {
 
         return roomname;
     }
-    public String[] retrieveGroupMessages(int roomId) {
-        List<String> messages = new ArrayList<>();
-        String query = "SELECT message_id, sender_username, content, timestamp FROM groupmessage WHERE room_id = ? ORDER BY timestamp ASC;";
-        
-        try (Connection connection = connectMySql.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+//   
+//    public ResultSet retrieveGroupMessages(int roomId) {
+//        String query = "SELECT message_id, sender_username, content, timestamp FROM groupmessage WHERE room_id = ? ORDER BY timestamp ASC;";
+//        
+//        try (Connection connection = connectMySql.getConnection();
+//             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+//
+//            preparedStatement.setInt(1, roomId);
+//
+//            return  preparedStatement.executeQuery();
+//
+//        } catch (SQLException e) {
+//            System.err.println("Error SQL: " + e.getMessage());
+//        }
+//        return null;
+//    }
 
-            preparedStatement.setInt(1, roomId);
+public List<GroupMessage> retrieveGroupMessages(int roomId) {
+    String query = "SELECT message_id, sender_username, content, timestamp FROM groupmessage WHERE room_id = ? ORDER BY timestamp ASC;";
+    List<GroupMessage> messages = new ArrayList<>();
 
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    int messageId = resultSet.getInt("message_id");
-                    String senderUsername = resultSet.getString("sender_username");
-                    String content = resultSet.getString("content");
-                    String timestamp = resultSet.getString("timestamp");
-                    java.sql.Timestamp sentTimestamp = resultSet.getTimestamp("timestamp");
+    try (Connection connection = connectMySql.getConnection();
+         PreparedStatement preparedStatement = connection.prepareStatement(query)) {
 
-                    String formattedMessage =  "| " + formatTimestamp(sentTimestamp) + " | " + senderUsername + ": " + content;
-                    messages.add(formattedMessage);
-                }
-            }
+        preparedStatement.setInt(1, roomId);
+        ResultSet resultSet = preparedStatement.executeQuery();
 
-        } catch (SQLException e) {
-            System.err.println("SQL exception occurred: " + e.getMessage());
+        while (resultSet.next()) {
+            int messageId = resultSet.getInt("message_id");
+            String senderUsername = resultSet.getString("sender_username");
+            String content = resultSet.getString("content");
+            Timestamp timestamp = resultSet.getTimestamp("timestamp");
+
+            GroupMessage message = new GroupMessage(messageId,roomId, senderUsername, content, convertTimestampToLocalDateTime(timestamp));
+            messages.add(message);
         }
 
-        // Convert ArrayList to String array
-        String[] messagesArray = new String[messages.size()];
-        messagesArray = messages.toArray(messagesArray);
+    } catch (SQLException e) {
+        System.err.println("Error SQL: " + e.getMessage());
+    }
 
-        return messagesArray;
+    return messages;
+}
+public static LocalDateTime convertTimestampToLocalDateTime(Timestamp timestamp) {
+    if (timestamp != null) {
+        return timestamp.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
-    private String formatTimestamp(Timestamp timestamp) {
-        LocalTime time = timestamp.toLocalDateTime().toLocalTime();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-        return time.format(formatter);
-    }
+    return null;
+}
 
 }

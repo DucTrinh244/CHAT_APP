@@ -243,8 +243,8 @@ public class Login{
 	private void login(String name,String password,int port,String IPAdress) {
         try {
             
-            Tab_Swing_1 runclient = new Tab_Swing_1(IPAdress,port,name);
-            runclient.setVisible(true);
+            Tab_Swing_2 runclient = new Tab_Swing_2(IPAdress,port,name);
+//            runclient.setVisible(true);
             
             frmMyComputer.dispose();
         } catch (Exception e) {

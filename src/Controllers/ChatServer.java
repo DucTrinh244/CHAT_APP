@@ -1,6 +1,9 @@
 package Controllers;
 
 import javax.swing.*;
+
+import DAO.GroupDAO;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -16,6 +19,8 @@ public class ChatServer implements Runnable {
     private ServerSocket serverSocket;
     private volatile boolean isRunning = true;
     private final List<ClientHandler> clientHandlers = new ArrayList<>();
+    private GroupDAO groupDAO= new GroupDAO();
+
 
     public ChatServer(JTextArea logArea, String IP_ADDRESS, int PORT) {
         this.logArea = logArea;
@@ -42,6 +47,7 @@ public class ChatServer implements Runnable {
                         clientHandlers.add(clientHandler);
                     }
                     new Thread(clientHandler).start();
+//                    sendMessagesToClients();
                 } catch (IOException e) {
                     if (isRunning) {
                         log("Error accepting connection: " + e.getMessage());
@@ -55,12 +61,24 @@ public class ChatServer implements Runnable {
         } finally {
             stopServer();
         }
+//        sendMessagesToClients();
     }
 
     void log(String message) {
         SwingUtilities.invokeLater(() -> logArea.append("[Server] : IP: " + IP_ADDRESS + ", Port: " + PORT + ", " + message + "\n"));
     }
-
+//    public void sendMessagesToClients() {
+//    	String[] messages=groupDAO.retrieveGroupMessages(1);
+//        synchronized (clientHandlers) {
+//            for (ClientHandler handler : ClientHandler.getClientHandlers()) {
+//                for (String message : messages) {
+//                	System.out.println(message);
+//                	handler.sendMessage("Global_Chatting", message);
+////                    handler.out.println("Global_Chatting;" + message);
+//                }
+//            }
+//        }
+//    }
     public void stopServer() {
         isRunning = false;
         log("Stopping server...");
